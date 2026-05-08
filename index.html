@@ -490,7 +490,7 @@ caricaProfilo();
 caricaMedia();
 
 // Password hash (SHA-256 di "poppone2024" — cambia con la tua)
-const PWD_HASH = 'a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3';
+const PWD_HASH = 'fa2ab1c42657b29868aca9fedc5b23e3d27ab6b95e955bae9528ebb27b97a268';
 
 async function sha256(str) {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
