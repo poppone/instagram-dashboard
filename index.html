@@ -162,6 +162,10 @@ textarea.form-input{resize:vertical;min-height:100px}
     <button class="nav-item" onclick="switchPanel('pubblica',this)">
       <span class="icon">🚀</span> Pubblica
     </button>
+    <div class="nav-section">Automazione</div>
+    <button class="nav-item" onclick="switchPanel('scheduler',this)">
+      <span class="icon">⚙️</span> Scheduler
+    </button>
     <div class="nav-section">AI Agent</div>
     <button class="nav-item" onclick="switchPanel('agent',this)">
       <span class="icon">🤖</span> Risposte AI
@@ -277,11 +281,55 @@ textarea.form-input{resize:vertical;min-height:100px}
       </div>
     </div>
 
+
+    <!-- SCHEDULER -->
+    <div id="panel-scheduler" class="panel">
+
+      <!-- Status cards -->
+      <div class="stats-grid" style="margin-bottom:1.5rem">
+        <div class="stat-card">
+          <div class="stat-label">Stato agente</div>
+          <div class="stat-value" id="sched-stato" style="font-size:18px">—</div>
+          <div class="stat-delta" id="sched-stato-sub">caricamento...</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Post pubblicati</div>
+          <div class="stat-value" id="sched-count">—</div>
+          <div class="stat-delta" id="sched-ultimo">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Prossimo post</div>
+          <div class="stat-value" id="sched-prossimo" style="font-size:16px">—</div>
+          <div class="stat-delta">ogni giorno alle 9:00</div>
+        </div>
+      </div>
+
+      <!-- Pubblica ora -->
+      <div class="gen-form" style="margin-bottom:1.5rem">
+        <div style="font-size:14px;font-weight:700;margin-bottom:4px">🚀 Pubblica subito</div>
+        <div style="font-size:12px;color:var(--muted);font-family:var(--mono);margin-bottom:1rem">Pubblica immediatamente un post senza aspettare le 9:00</div>
+        <label class="form-label">Tema (lascia vuoto per random)</label>
+        <input class="form-input" id="sched-tema" placeholder="es. intelligenza artificiale, app produttività..." />
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-primary" onclick="pubblicaOra()" style="flex:1">🚀 Pubblica ora</button>
+        </div>
+        <div id="sched-result" style="margin-top:12px;font-size:12px;font-family:var(--mono);display:none;padding:12px;background:var(--surface2);border-radius:8px;line-height:1.6"></div>
+      </div>
+
+      <!-- Temi disponibili -->
+      <div class="gen-form">
+        <div style="font-size:14px;font-weight:700;margin-bottom:4px">🎯 Temi disponibili</div>
+        <div style="font-size:12px;color:var(--muted);font-family:var(--mono);margin-bottom:1rem">Clicca un tema per usarlo nel prossimo post</div>
+        <div id="temi-grid" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+      </div>
+
+    </div>
+
   </main>
 </div>
 
 <script>
-const API = 'https://web-production-15bcc.up.railway.app';
+const API = 'http://localhost:3000';
 
 function switchPanel(name, el) {
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -442,7 +490,7 @@ caricaProfilo();
 caricaMedia();
 
 // Password hash (SHA-256 di "poppone2024" — cambia con la tua)
-const PWD_HASH = 'fa2ab1c42657b29868aca9fedc5b23e3d27ab6b95e955bae9528ebb27b97a268';
+const PWD_HASH = 'a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3';
 
 async function sha256(str) {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
@@ -467,6 +515,112 @@ if(sessionStorage.getItem('auth') === '1') {
     document.getElementById('login-screen').style.display = 'none';
   });
 }
+
+
+// ── Scheduler ────────────────────────────────────────────
+const TEMI = [
+  "intelligenza artificiale e futuro del lavoro",
+  "app produttività per smartphone",
+  "gadget tech del momento",
+  "consigli per sviluppatori",
+  "novità nel mondo delle startup",
+  "sicurezza informatica e privacy",
+  "dispositivi wearable e smartwatch",
+  "cloud computing e servizi digitali",
+  "machine learning nella vita quotidiana",
+  "migliori app per Android e iOS",
+  "robotica e automazione",
+  "realtà virtuale e aumentata",
+  "tendenze tech del 2025",
+  "open source e software libero",
+  "fotografia con smartphone"
+];
+
+// Renderizza temi cliccabili
+const temiGrid = document.getElementById('temi-grid');
+TEMI.forEach(t => {
+  const btn = document.createElement('button');
+  btn.className = 'btn btn-ghost';
+  btn.style.cssText = 'font-size:11px;padding:4px 10px;font-family:var(--mono)';
+  btn.textContent = t;
+  btn.onclick = () => { document.getElementById('sched-tema').value = t; };
+  temiGrid.appendChild(btn);
+});
+
+async function caricaStatusScheduler() {
+  try {
+    const r = await fetch(`${API}/scheduler/status`);
+    const d = await r.json();
+    document.getElementById('sched-stato').textContent = d.attivo ? '🟢 Attivo' : '🔴 Fermo';
+    document.getElementById('sched-stato-sub').textContent = d.attivo ? 'scheduler in esecuzione' : 'avvia dalla dashboard';
+    document.getElementById('sched-count').textContent = d.post_pubblicati ?? '0';
+    document.getElementById('sched-ultimo').textContent = d.ultimo_post ? 'ultimo: ' + d.ultimo_post : 'nessun post ancora';
+    document.getElementById('sched-prossimo').textContent = d.prossimo_post ?? 'domani alle 9:00';
+  } catch(e) {
+    document.getElementById('sched-stato').textContent = '⚠️';
+    document.getElementById('sched-stato-sub').textContent = 'server non raggiungibile';
+  }
+}
+
+async function pubblicaOra() {
+  const tema = document.getElementById('sched-tema').value.trim();
+  const result = document.getElementById('sched-result');
+  result.style.display = 'block';
+  result.style.color = 'var(--muted)';
+  result.textContent = '⏳ Generazione e pubblicazione in corso... (può richiedere 10-20 secondi)';
+
+  try {
+    let url = `${API}/scheduler/pubblica-ora`;
+    let body = {};
+    
+    // Se c'è un tema personalizzato, usalo
+    if(tema) {
+      url = `${API}/posts/genera-caption`;
+      const capResp = await fetch(url, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({tema, hashtag: true})
+      });
+      const capData = await capResp.json();
+      
+      // Poi pubblica con la caption generata
+      const pubResp = await fetch(`${API}/scheduler/pubblica-ora`, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({})
+      });
+      const pubData = await pubResp.json();
+      
+      if(pubData.post_id || pubData.status === 'pubblicato') {
+        result.style.color = '#3ecf4a';
+        result.innerHTML = `✓ Post pubblicato!<br>Tema: ${pubData.tema || tema}<br>ID: ${pubData.post_id}<br><br>${(pubData.caption || '').slice(0,200)}...`;
+        caricaStatusScheduler();
+      } else {
+        result.style.color = 'var(--pink)';
+        result.textContent = '✗ Errore: ' + JSON.stringify(pubData);
+      }
+    } else {
+      const r = await fetch(`${API}/scheduler/pubblica-ora`, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({})
+      });
+      const d = await r.json();
+      if(d.post_id || d.status === 'pubblicato') {
+        result.style.color = '#3ecf4a';
+        result.innerHTML = `✓ Post pubblicato!<br>Tema: ${d.tema}<br>ID: ${d.post_id}<br><br>${(d.caption||'').slice(0,200)}...`;
+        caricaStatusScheduler();
+      } else {
+        result.style.color = 'var(--pink)';
+        result.textContent = '✗ Errore: ' + JSON.stringify(d);
+      }
+    }
+  } catch(e) {
+    result.style.color = 'var(--pink)';
+    result.textContent = '✗ Errore connessione — server attivo?';
+  }
+}
+
+// Carica status scheduler all'avvio
+caricaStatusScheduler();
+setInterval(caricaStatusScheduler, 30000);
 
 </script>
 </body>
