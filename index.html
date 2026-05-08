@@ -490,17 +490,11 @@ caricaProfilo();
 caricaMedia();
 
 // Password hash (SHA-256 di "poppone2024" — cambia con la tua)
-const PWD_HASH = 'fa2ab1c42657b29868aca9fedc5b23e3d27ab6b95e955bae9528ebb27b97a268';
 
-async function sha256(str) {
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
-  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
-}
 
-async function checkPwd() {
+function checkPwd() {
   const pwd = document.getElementById('pwd-input').value;
-  const hash = await sha256(pwd);
-  if(hash === PWD_HASH) {
+  if(pwd === '290488') {
     sessionStorage.setItem('auth', '1');
     document.getElementById('login-screen').style.display = 'none';
   } else {
@@ -509,10 +503,10 @@ async function checkPwd() {
   }
 }
 
-// Controlla se già autenticato
 if(sessionStorage.getItem('auth') === '1') {
   document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('login-screen').style.display = 'none';
+    const ls = document.getElementById('login-screen');
+    if(ls) ls.style.display = 'none';
   });
 }
 
