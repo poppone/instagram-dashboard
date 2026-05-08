@@ -104,9 +104,33 @@ textarea.form-input{resize:vertical;min-height:100px}
 .url-preview{margin-top:8px;font-size:11px;color:var(--muted);font-family:var(--mono)}
 
 @media(max-width:768px){.layout{grid-template-columns:1fr}.sidebar{display:none}.stats-grid{grid-template-columns:1fr 1fr}}
+
+#login-screen{position:fixed;inset:0;background:#0a0a0a;z-index:9999;display:flex;align-items:center;justify-content:center}
+.login-box{background:#111;border:1px solid #222;border-radius:16px;padding:2.5rem;width:100%;max-width:360px;text-align:center}
+.login-logo{width:56px;height:56px;border-radius:14px;background:linear-gradient(135deg,#833AB4,#E1306C,#F77737);display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 1.25rem}
+.login-title{font-size:20px;font-weight:800;margin-bottom:4px}
+.login-sub{font-size:12px;color:#666;font-family:'DM Mono',monospace;margin-bottom:1.5rem}
+.login-input{width:100%;background:#1a1a1a;border:1px solid #222;border-radius:8px;padding:12px 16px;color:#f0f0f0;font-size:14px;outline:none;text-align:center;letter-spacing:4px;font-family:'DM Mono',monospace;margin-bottom:12px}
+.login-input:focus{border-color:#444}
+.login-btn{width:100%;padding:12px;background:linear-gradient(135deg,#833AB4,#E1306C,#F77737);border:none;border-radius:8px;color:white;font-size:14px;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif}
+.login-btn:hover{opacity:.85}
+.login-error{font-size:12px;color:#E1306C;font-family:'DM Mono',monospace;margin-top:8px;display:none}
+
 </style>
 </head>
 <body>
+
+
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">📸</div>
+    <div class="login-title">@p0pp0ne</div>
+    <div class="login-sub">AI Agent Dashboard — accesso privato</div>
+    <input class="login-input" type="password" id="pwd-input" placeholder="••••••••" onkeydown="if(event.key==='Enter')checkPwd()" autofocus />
+    <button class="login-btn" onclick="checkPwd()">Entra</button>
+    <div class="login-error" id="login-error">Password errata. Riprova.</div>
+  </div>
+</div>
 
 <header class="header">
   <div class="logo">
@@ -257,7 +281,7 @@ textarea.form-input{resize:vertical;min-height:100px}
 </div>
 
 <script>
-const API = 'https://web-production-15bcc.up.railway.app';
+const API = 'http://localhost:3000';
 
 function switchPanel(name, el) {
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -416,6 +440,34 @@ async function testaAI() {
 // Init
 caricaProfilo();
 caricaMedia();
+
+// Password hash (SHA-256 di "poppone2024" — cambia con la tua)
+const PWD_HASH = 'a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3';
+
+async function sha256(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+async function checkPwd() {
+  const pwd = document.getElementById('pwd-input').value;
+  const hash = await sha256(pwd);
+  if(hash === PWD_HASH) {
+    sessionStorage.setItem('auth', '1');
+    document.getElementById('login-screen').style.display = 'none';
+  } else {
+    document.getElementById('login-error').style.display = 'block';
+    document.getElementById('pwd-input').value = '';
+  }
+}
+
+// Controlla se già autenticato
+if(sessionStorage.getItem('auth') === '1') {
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('login-screen').style.display = 'none';
+  });
+}
+
 </script>
 </body>
 </html>
